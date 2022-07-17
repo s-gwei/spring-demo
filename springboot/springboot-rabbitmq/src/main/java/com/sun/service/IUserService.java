@@ -1,9 +1,14 @@
 package com.sun.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.sun.pojo.User;
 
-public interface IUserService {
-    void save(User user);
+import java.util.List;
 
-    User selectUser();
+public interface IUserService {
+//    void save(User user);
+
+    List<User> selectUser();
+
+    void save(User user);
 }

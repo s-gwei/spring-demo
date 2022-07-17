@@ -5,11 +5,13 @@ import com.sun.service.IUserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * @description: user控制类
@@ -34,8 +36,8 @@ public class UserController {
         rabbitTemplate.convertAndSend("userExchange","userRoutingKey",new User(i, "sungw"+i));
     }
 
-    @PostMapping
-    public void selectUser(){
-        User user = userService.selectUser();
+    @GetMapping
+    public List<User> selectUser(){
+        return userService.selectUser();
     }
 }

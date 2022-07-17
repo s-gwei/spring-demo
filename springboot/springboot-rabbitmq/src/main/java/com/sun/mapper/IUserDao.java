@@ -1,4 +1,4 @@
-package com.sun.dao;
+package com.sun.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.sun.pojo.User;
@@ -6,8 +6,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
-public interface IUserDao extends BaseMapper<User> {
+public interface IUserDao{
 
-    User selectUser();
+    List<User> selectUser();
+
+    int insert(User user);
 }

@@ -13,7 +13,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication(scanBasePackages = {"com.sun.*"})
-@MapperScan("com.sun.dao")
+@MapperScan("com.sun.mapper")
 @EnableRabbit
 public class Application {
 

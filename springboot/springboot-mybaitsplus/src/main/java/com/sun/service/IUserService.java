@@ -13,7 +13,7 @@ import java.util.List;
  * @author astupidcoder
  * @since 2022-07-17
  */
-public interface IUserService extends IService<User> {
+public interface IUserService {
 
     List<User> findAllUser();
 }
