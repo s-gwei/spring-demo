@@ -37,11 +37,11 @@ public class MapController {
         rabbitTemplate.convertAndSend("mapExchange","mapRoutingKey", map);
     }
 
-//    @GetMapping("/test1")
-//    public void getUser1(){
-//        User user = new User(1, "sungw");
-//        log.info("当前时间:{},发送一条消息给两个TTL队列：{}",new Date().toString(),user);
-//        jacksonRabbitTemplate.convertAndSend("xExchange","xRoutingKey", user);
-//    }
+    @GetMapping("/test1")
+    public void getUser1(){
+        User user = new User(1, "sungw");
+        log.info("当前时间:{},发送一条消息给两个TTL队列：{}",new Date().toString(),user);
+        rabbitTemplate.convertAndSend("xExchange","xRoutingKey", user);
+    }
 
 }

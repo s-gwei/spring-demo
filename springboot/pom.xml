@@ -8,6 +8,7 @@
         <module>ssmDemo</module>
         <module>redis</module>
         <module>springboot-rabbitmq</module>
+        <module>springboot-mybaitsplus</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
