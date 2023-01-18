@@ -24,20 +24,20 @@ public class Work04 {
         * 设置不公平分发，应该是根据应答来确定消费消息是否完毕，所以必须设置手动应答，否者自动应该在接收到消息就应答，则没有意义
         *  预期值设置prefetCount为2时，就是预期值，就是设置消费者先接收多少条消息，设置为10
         */
-        int prefetCount = 2;
-        channel.basicQos(prefetCount);
+//        int prefetCount = 2;
+//        channel.basicQos(prefetCount);
 
         System.out.println("C1 等待接收消息处理时间较短");
         //消息消费的时候如何处理消息
         DeliverCallback deliverCallback=(consumerTag, delivery)->{
             String message= new String(delivery.getBody());
-            SleepUtils.sleep(1);
+//            SleepUtils.sleep(1);
             System.out.println("接收到消息:"+message);
             /**
              * 1.消息标记 tag
              * 2.是否批量应答未应答消息
              */
-            channel.basicAck(delivery.getEnvelope().getDeliveryTag(),false);
+//            channel.basicAck(delivery.getEnvelope().getDeliveryTag(),false);
         };
 
         CancelCallback cancelCallback =(consumerTag)->{

@@ -10,6 +10,10 @@ import java.util.Map;
 
 /**
  * @description: 消费者1：创建死信队列
+ * 死信消息的三大来源
+ * 1,队列的TTL
+ * 2,队列的消息数量达到最大
+ * 3,消息被拒绝
  * @author: sungw
  * @create: 2021-10-23 21:17
  **/
@@ -25,7 +29,7 @@ public class Consumer01 {
         channel.exchangeDeclare(NORMAL_EXCHANGE, BuiltinExchangeType.DIRECT);
         channel.exchangeDeclare(DEAD_EXCHANGE, BuiltinExchangeType.DIRECT);
         //声明死信队列
-        String deadQueue = "dead-queue";
+        String deadQueue = "dead_queue";
         channel.queueDeclare(deadQueue, false, false, false, null);
         //死信队列绑定死信交换机与 routingkey
         channel.queueBind(deadQueue, DEAD_EXCHANGE, "lisi");
@@ -40,21 +44,22 @@ public class Consumer01 {
         channel.queueBind(normalQueue, NORMAL_EXCHANGE, "zhangsan");
         System.out.println("等待接收消息.....");
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            //拒绝消息
+            //3,拒绝消息
             String message = new String(delivery.getBody(), "UTF-8");
             if(message.equals("info5")){
                 System.out.println("Consumer01 接收到消息"+message+"消息被拒绝");
                 channel.basicReject(delivery.getEnvelope().getDeliveryTag(),false);
             }else{
-
-                System.out.println("Consumer01 接收到消息"+message);
-                channel.basicAck(delivery.getEnvelope().getDeliveryTag(),false);
+                System.out.println("Consumer01 接收到消息"+message+System.currentTimeMillis());
+//                channel.basicAck(delivery.getEnvelope().getDeliveryTag(),false);
             }
 
         };
         //开启手动应答
-//        channel.basicConsume(normalQueue, false, deliverCallback, consumerTag -> {
-            channel.basicConsume(normalQueue, true, deliverCallback, consumerTag -> {
+        channel.basicConsume(normalQueue, false, deliverCallback, consumerTag -> {
+
+
+//            channel.basicConsume(normalQueue, true, deliverCallback, consumerTag -> {
         });
     }
 }

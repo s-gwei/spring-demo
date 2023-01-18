@@ -1,6 +1,5 @@
 package com.sun.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sun.mapper.IUserDao;
 import com.sun.pojo.User;
 import com.sun.service.IUserService;

@@ -13,6 +13,7 @@ import java.util.Map;
  * @description: 消费者1
  * @author: sungw
  * @create: 2022-07-09 11:22
+ *
  **/
 public class Consumer01 {
 
@@ -39,7 +40,7 @@ public class Consumer01 {
         //设置死信RoutingKey
         arguments.put("x-dead-letter-routing-key", "lisi");
         //设置过期时间,也可以生产者设置过期时间
-//        arguments.put("x-message-ttl", 100000);
+        arguments.put("x-message-ttl", 100000);
 
 
         //声明死信和普通队列,由最后一个参数决定普通队列是否发消息给死信交换机
@@ -51,11 +52,10 @@ public class Consumer01 {
         channel.queueBind(DEAD_QUEUE, DEAD_EXCHANGE, "lisi");
         System.out.println("等待接收消息");
 
-
-
         //接收消息
         DeliverCallback deliverCallback = (consumerTag,message)->{
             System.out.println("consume01接受的消息是" + new String(message.getBody(), "UTF-8"));
+//            channel.basicReject(message.getEnvelope().getDeliveryTag(),false);
         };
 
         //拒绝消息
@@ -63,7 +63,8 @@ public class Consumer01 {
             System.out.println(consumerTag+"消费者取消消费接口回调逻辑");
         };
 
-        channel.basicConsume(NORMAL_QUEUE, true, deliverCallback, cancelCallback);
+        //自动应答true,手动应答false
+        channel.basicConsume(NORMAL_QUEUE, false, deliverCallback, cancelCallback);
     }
 
 

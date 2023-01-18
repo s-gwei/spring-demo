@@ -15,7 +15,7 @@ public class Consumer02 {
     public static void main(String[] argv) throws Exception {
         Channel channel = RabbitMQutils.getChannel();
         channel.exchangeDeclare(DEAD_EXCHANGE, BuiltinExchangeType.DIRECT);
-        String deadQueue = "dead-queue";
+        String deadQueue = "dead_queue";
         channel.queueDeclare(deadQueue, false, false, false, null);
         channel.queueBind(deadQueue, DEAD_EXCHANGE, "lisi");
         System.out.println("等待接收死信队列消息.....");

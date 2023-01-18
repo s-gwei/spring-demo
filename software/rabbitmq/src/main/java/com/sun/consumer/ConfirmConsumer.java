@@ -5,6 +5,8 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import java.util.logging.Logger;
+
 /**
  * @author lisw
  * @create 2021/6/26 15:43

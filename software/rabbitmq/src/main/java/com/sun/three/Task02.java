@@ -46,7 +46,7 @@ public class Task02 {
          * 3.其他的参数信息
          * 4.发送消息的消息体
 //         */
-//        channel.basicPublish("", QUEUE_NAME, null, message.getBytes());
+//        channel.basicPublish("", TASK_QUEUE_NAME, null, message.getBytes());
 //        System.out.println("消息发送完毕");
 //        channel.basicConsume("", TASK_QUEUE_NAME, null,)
     }

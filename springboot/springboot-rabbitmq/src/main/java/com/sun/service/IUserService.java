@@ -1,6 +1,5 @@
 package com.sun.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.sun.pojo.User;
 
 import java.util.List;

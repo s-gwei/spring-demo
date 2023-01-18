@@ -37,9 +37,9 @@ public class Consumer01 {
         //正常队列设置死信交换机
         arguments.put("x-dead-letter-exchange", DEAD_EXCHANGE);
         //设置死信RoutingKey
-        arguments.put("x-dead-letter-routing-key", "lisi");
+        arguments.put("x-dead-letter-routing-key", "wangwu");
         //设置正常队列的长度的限制
-        arguments.put("x-max-length", 100000);
+        arguments.put("x-max-length", 6);
         //设置过期时间,也可以生产者设置过期时间
 //        arguments.put("x-message-ttl", 100000);
 
@@ -50,7 +50,7 @@ public class Consumer01 {
 
         //交换机和队列绑定
         channel.queueBind(NORMAL_QUEUE, NORMAL_EXCHANGE, "zhangsan");
-        channel.queueBind(DEAD_QUEUE, DEAD_EXCHANGE, "lisi");
+        channel.queueBind(DEAD_QUEUE, DEAD_EXCHANGE, "wangwu");
         System.out.println("等待接收消息");
 
 

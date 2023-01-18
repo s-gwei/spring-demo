@@ -22,7 +22,7 @@ public class Work05 {
         //消息消费的时候如何处理消息
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
             String message = new String(delivery.getBody());
-            SleepUtils.sleep(30);
+//            SleepUtils.sleep(30);
             System.out.println("接收到消息:" + message);
             /**
              * 1.消息标记 tag
