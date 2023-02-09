@@ -15,6 +15,7 @@
         <module>spring-annotation</module>
         <module>mybaits-demo</module>
         <module>spring-aop-demo</module>
+        <module>spring-filter</module>
     </modules>
 
     <properties>
