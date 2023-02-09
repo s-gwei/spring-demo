@@ -1,0 +1,1002 @@
+Index: spring/mybaits-demo/src/main/java/com/sun/bind/MapperProxy.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/bind/MapperProxy.java	(date 1675583412375)
++++ spring/mybaits-demo/src/main/java/com/sun/bind/MapperProxy.java	(date 1675583412375)
+@@ -0,0 +1,30 @@
++package com.sun.bind;
++
++import com.sun.session.SqlSession;
++
++import java.lang.reflect.InvocationHandler;
++import java.lang.reflect.Method;
++import java.util.Collection;
++
++public class MapperProxy implements InvocationHandler {
++    private SqlSession sqlSession;
++
++    public MapperProxy(SqlSession sqlSession) {
++        this.sqlSession = sqlSession;
++    }
++
++    @Override
++    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
++        System.out.println(method.getDeclaringClass().getName()+"."+method.getName());
++        //最终还是将执行方法转给 sqlSession，因为 sqlSession 里面封装了 Executor
++        //根据调用方法的类名和方法名以及参数，传给 sqlSession 对应的方法
++        System.out.println(method.getReturnType().getName());
++        if(Collection.class.isAssignableFrom(method.getReturnType())){
++            return sqlSession.selectList(method.getDeclaringClass().getName()+"."+method.getName(),args==null?null:args[0]);
++        }else if("insertUser".equals(method.getName())){
++            return sqlSession.insert(method.getDeclaringClass().getName()+"."+method.getName(),args==null?null:args[0]);
++        }else{
++            return sqlSession.selectOne(method.getDeclaringClass().getName()+"."+method.getName(),args==null?null:args[0]);
++        }
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/TestMybaits.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/TestMybaits.java	(date 1675921121517)
++++ spring/mybaits-demo/src/main/java/com/sun/TestMybaits.java	(date 1675921121517)
+@@ -0,0 +1,54 @@
++package com.sun;
++
++import com.sun.mapper.UserMapper;
++import com.sun.pojo.User;
++import com.sun.session.SqlSession;
++import com.sun.session.SqlSessionFactory;
++
++import java.io.IOException;
++import java.util.List;
++
++/**
++ *
++ * （一）、创建 SqlSessionFactory 实例。
++ *
++ * （二）、实例化过程，加载配置文件创建 Configuration 对象。
++ *
++ * （三）、通过 factory 创建 SqlSession。
++ *
++ * （四）、通过 SqlSession 获取 mapper 接口动态代理。
++ *
++ * （五）、动态代理回调 SqlSession 中某查询方法。
++ *
++ * （六）、SqlSession 将查询方法转发给 Executor。
++ *
++ * （七）、Executor 基于 JDBC 访问数据库获取数据。
++ *
++ * （八）、Executor 通过反射将数据转换成 POJO并返回给 SqlSession。
++ *
++ * （九）、将数据返回给调用者。
++ */
++public class TestMybaits {
++    public static void main(String[] args) {
++        //创建SqlSessionFactory工厂，连接数据库
++        SqlSessionFactory factory = new SqlSessionFactory();
++        //调用openSession，创建一次连接，SqlSession操作数据库
++        SqlSession session = factory.openSession();
++        System.out.println(session);
++        //获取mapper接口
++        UserMapper mapper = session.getMapper(UserMapper.class);
++
++//        List<User> user = mapper.findUserList();
++//        mapper.findUserList();
++        for(int i=0;i<10;i++){
++            User user = new User();
++            user.setUserId(i);
++            user.setUserName("张三"+i);
++            user.setSex(0);
++            user.setRole("会员");
++            mapper.insertUser(user);
++            System.out.println(user.toString());
++        }
++
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/executor/Executor.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/executor/Executor.java	(date 1675583412376)
++++ spring/mybaits-demo/src/main/java/com/sun/executor/Executor.java	(date 1675583412376)
+@@ -0,0 +1,19 @@
++package com.sun.executor;
++
++import com.sun.config.MappedStatement;
++
++import java.util.List;
++
++public interface Executor {
++    /**
++     *
++     * 查询接口
++     * @param ms 封装sql 语句的 mappedStatemnet 对象，里面包含了 sql 语句，resultType 等。
++     * @param parameter 传入sql 参数
++     * @param <E> 将数据对象转换成指定对象结果集返回
++     * @return
++     */
++    <E> List<E> query(MappedStatement ms, Object parameter);
++
++    int insertOrUpdate(MappedStatement statement, Object parameter);
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/config/MappedStatement.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/config/MappedStatement.java	(date 1675583412375)
++++ spring/mybaits-demo/src/main/java/com/sun/config/MappedStatement.java	(date 1675583412375)
+@@ -0,0 +1,44 @@
++package com.sun.config;
++
++public class MappedStatement {
++
++    private String nameSpace;
++
++    private String sourceId;
++
++    private String sql;
++
++    private String resultType;
++
++    public String getNameSpace() {
++        return nameSpace;
++    }
++
++    public void setNameSpace(String nameSpace) {
++        this.nameSpace = nameSpace;
++    }
++
++    public String getSourceId() {
++        return sourceId;
++    }
++
++    public void setSourceId(String sourceId) {
++        this.sourceId = sourceId;
++    }
++
++    public String getSql() {
++        return sql;
++    }
++
++    public void setSql(String sql) {
++        this.sql = sql;
++    }
++
++    public String getResultType() {
++        return resultType;
++    }
++
++    public void setResultType(String resultType) {
++        this.resultType = resultType;
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/config/Configuration.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/config/Configuration.java	(date 1675583412375)
++++ spring/mybaits-demo/src/main/java/com/sun/config/Configuration.java	(date 1675583412375)
+@@ -0,0 +1,59 @@
++package com.sun.config;
++
++import java.util.HashMap;
++import java.util.Map;
++
++//填充数据对象
++public class Configuration {
++    //填充数据库连接信息
++    private String jdbcDriver;
++
++    private String jdbcUrl;
++
++    private String jdbcUserName;
++
++    private String jdbcPassword;
++    //填充数据库请求信息
++    private Map<String,MappedStatement> mappedStatement =
++            new HashMap<String,MappedStatement>();
++
++    public Map<String, MappedStatement> getMappedStatement() {
++        return mappedStatement;
++    }
++
++    public void setMappedStatement(Map<String, MappedStatement> mappedStatement) {
++        this.mappedStatement = mappedStatement;
++    }
++
++    public String getJdbcDriver() {
++        return jdbcDriver;
++    }
++
++    public void setJdbcDriver(String jdbcDriver) {
++        this.jdbcDriver = jdbcDriver;
++    }
++
++    public String getJdbcUrl() {
++        return jdbcUrl;
++    }
++
++    public void setJdbcUrl(String jdbcUrl) {
++        this.jdbcUrl = jdbcUrl;
++    }
++
++    public String getJdbcUserName() {
++        return jdbcUserName;
++    }
++
++    public void setJdbcUserName(String jdbcUserName) {
++        this.jdbcUserName = jdbcUserName;
++    }
++
++    public String getJdbcPassword() {
++        return jdbcPassword;
++    }
++
++    public void setJdbcPassword(String jdbcPassword) {
++        this.jdbcPassword = jdbcPassword;
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/mapper/UserMapper.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/mapper/UserMapper.java	(date 1675583412377)
++++ spring/mybaits-demo/src/main/java/com/sun/mapper/UserMapper.java	(date 1675583412377)
+@@ -0,0 +1,18 @@
++package com.sun.mapper;
++
++import com.sun.pojo.User;
++import org.apache.ibatis.annotations.Param;
++
++
++import java.util.List;
++
++public interface UserMapper {
++//    User findUserById(@Param("userId") long userId);
++    User findUserById(int userId);
++
++    List<User> findUserList();
++
++    void insertUser(@Param("userId")User user);
++
++
++}
+Index: spring/mybaits-demo/pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/pom.xml	(date 1675920845088)
++++ spring/mybaits-demo/pom.xml	(date 1675920845088)
+@@ -0,0 +1,54 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project xmlns="http://maven.apache.org/POM/4.0.0"
++         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
++    <parent>
++        <artifactId>spring</artifactId>
++        <groupId>com.sun</groupId>
++        <version>0.0.1-SNAPSHOT</version>
++    </parent>
++    <modelVersion>4.0.0</modelVersion>
++
++    <artifactId>mybaits-demo</artifactId>
++
++    <build>
++        <plugins>
++            <plugin>
++                <groupId>org.apache.maven.plugins</groupId>
++                <artifactId>maven-compiler-plugin</artifactId>
++                <configuration>
++                    <source>7</source>
++                    <target>7</target>
++                </configuration>
++            </plugin>
++        </plugins>
++    </build>
++    <dependencies>
++        <!-- https://mvnrepository.com/artifact/org.springframework/spring-jdbc -->
++        <!--      <dependency>-->
++        <!--          <groupId>org.springframework</groupId>-->
++        <!--          <artifactId>spring-jdbc</artifactId>-->
++        <!--          <version>5.2.12.RELEASE</version>-->
++        <!--      </dependency>-->
++        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
++        <dependency>
++            <groupId>mysql</groupId>
++            <artifactId>mysql-connector-java</artifactId>
++            <!--          <version>5.1.49</version>-->
++            <version>6.0.2</version>
++        </dependency>
++
++        <dependency>
++            <groupId>com.baomidou</groupId>
++            <artifactId>mybatis-plus-boot-starter</artifactId>
++            <version>3.1.0</version>
++        </dependency>
++        <!-- https://mvnrepository.com/artifact/dom4j/dom4j -->
++        <dependency>
++            <groupId>dom4j</groupId>
++            <artifactId>dom4j</artifactId>
++            <version>1.6</version>
++        </dependency>
++
++    </dependencies>
++</project>
+\ No newline at end of file
+Index: spring/mybaits-demo/src/main/java/com/sun/executor/SimpleExecutor.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/executor/SimpleExecutor.java	(date 1675583412377)
++++ spring/mybaits-demo/src/main/java/com/sun/executor/SimpleExecutor.java	(date 1675583412377)
+@@ -0,0 +1,126 @@
++package com.sun.executor;
++
++import com.sun.config.Configuration;
++import com.sun.config.MappedStatement;
++import com.sun.util.ReflectionUtil;
++
++import java.sql.*;
++import java.util.ArrayList;
++import java.util.List;
++
++public class SimpleExecutor implements Executor{
++
++    private final Configuration configuration;
++
++    public SimpleExecutor(Configuration configuration) {
++        this.configuration = configuration;
++    }
++
++    @Override
++    public <E> List<E> query(MappedStatement ms, Object parameter) {
++        System.out.println(ms.getSql().toString());
++        List<E> ret = new ArrayList<>(); //返回结果集
++        try {
++            Class.forName(configuration.getJdbcDriver());
++        } catch (ClassNotFoundException e) {
++            e.printStackTrace();
++        }
++
++        Connection connection = null;
++        PreparedStatement preparedStatement = null;
++        ResultSet resultSet = null;
++        try {
++            connection = DriverManager.getConnection(configuration.getJdbcUrl(), configuration.getJdbcUserName(), configuration.getJdbcPassword());
++            String regex = "#\\{([^}])*\\}";
++            // 将 sql 语句中的 #{userId} 替换为 ？
++            String  sql = ms.getSql().replaceAll(regex,"?");
++            preparedStatement = connection.prepareStatement(sql);
++            //处理占位符
++            parametersize(preparedStatement, parameter);
++            resultSet = preparedStatement.executeQuery();
++//            resultSet = preparedStatement.executeUpdate();
++            handlerResultSet(resultSet, ret,ms.getResultType());
++        }catch (SQLException e){
++            e.printStackTrace();
++        }finally {
++            try {
++                resultSet.close();
++                preparedStatement.close();
++                connection.close();
++            }catch (Exception e){
++                e.printStackTrace();
++            }
++        }
++
++        return ret;
++    }
++
++    @Override
++    public int insertOrUpdate(MappedStatement ms, Object parameter) {
++        try {
++            Class.forName(configuration.getJdbcDriver());
++        } catch (ClassNotFoundException e) {
++            e.printStackTrace();
++        }
++        Connection connection = null;
++        PreparedStatement preparedStatement = null;
++        ResultSet resultSet = null;
++        try {
++             connection = DriverManager.getConnection(configuration.getJdbcUrl(), configuration.getJdbcUserName(), configuration.getJdbcPassword());
++            String regex = "#\\{([^}])*\\}";
++            // 将 sql 语句中的 #{userId} 替换为 ？
++            String  sql = ms.getSql().replaceAll(regex,"?");
++            preparedStatement = connection.prepareStatement(sql);
++            //处理占位符
++            parametersize(preparedStatement, parameter);
++            int i= preparedStatement.executeUpdate();
++//            handlerResultSet(resultSet, ret,ms.getResultType());
++            return i;
++        }catch (SQLException e){
++            e.printStackTrace();
++        }finally {
++            try {
++                resultSet.close();
++                preparedStatement.close();
++                connection.close();
++            }catch (Exception e){
++                e.printStackTrace();
++            }
++        }
++        return 0;
++    }
++
++
++    private void parametersize(PreparedStatement preparedStatement,Object parameter) throws SQLException{
++        if(parameter instanceof Integer){
++            preparedStatement.setInt(1,(int)parameter);
++        }else if(parameter instanceof  Long){
++            preparedStatement.setLong(1,(Long)parameter);
++        }else if(parameter instanceof  String){
++            preparedStatement.setString(1,(String)parameter);
++        }
++    }
++
++    private <E> void handlerResultSet(ResultSet resultSet, List<E> ret,String className){
++        Class<E> clazz = null;
++        //通过反射获取类对象
++        try {
++            clazz = (Class<E>)Class.forName(className);
++        } catch (ClassNotFoundException e) {
++            e.printStackTrace();
++        }
++
++
++        try {
++            while (resultSet.next()) {
++                Object entity = clazz.newInstance();
++                //通过反射工具 将 resultset 中的数据填充到 entity 中
++                ReflectionUtil.setPropToBeanFromResultSet(entity, resultSet);
++                ret.add((E) entity);
++            }
++        } catch (Exception e) {
++            e.printStackTrace();
++        }
++
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/session/DefaultSqlSession.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/session/DefaultSqlSession.java	(date 1675920223252)
++++ spring/mybaits-demo/src/main/java/com/sun/session/DefaultSqlSession.java	(date 1675920223252)
+@@ -0,0 +1,58 @@
++package com.sun.session;
++
++import com.sun.bind.MapperProxy;
++import com.sun.config.Configuration;
++import com.sun.config.MappedStatement;
++import com.sun.executor.Executor;
++import com.sun.executor.SimpleExecutor;
++
++import java.lang.reflect.Proxy;
++import java.util.List;
++
++public class DefaultSqlSession implements SqlSession{
++
++    private final Configuration configuration;
++
++    private Executor executor;
++
++    public DefaultSqlSession(Configuration configuration) {
++        this.configuration = configuration;
++        executor = new SimpleExecutor(configuration);
++    }
++
++    @Override
++    public <T> T selectOne(String statement, Object parameter) {
++
++        List<T> selectList = this.selectList(statement,parameter);
++        if(selectList == null || selectList.size() == 0){
++            return null;
++        }
++        if(selectList.size() == 1){
++            return (T) selectList.get(0);
++        }else{
++            throw new RuntimeException("too many result");
++        }
++    }
++
++    @Override
++    public <T> List<T> selectList(String statement, Object parameter) {
++        MappedStatement ms = configuration.getMappedStatement().get(statement);
++        // 我们的查询方法最终还是交给了 Executor 去执行，
++        // Executor 里面封装了 JDBC 操作。传入参数包含了 sql 语句和 sql 语句需要的参数。
++        return executor.query(ms,parameter);
++    }
++
++    @Override
++    public <T> int insert(String statement, Object parameter) {
++        MappedStatement ms = configuration.getMappedStatement().get(statement);
++        return executor.insertOrUpdate(ms,parameter);
++    }
++
++    @Override
++    public <T> T getMapper(Class<T> type) {
++        //通过动态代理生成了一个实现类，我们重点关注，动态代理的实现，它是一个 InvocationHandler，传入参数是 this，就是 sqlSession 的一个实例。
++//        MapperProxy mp = ;
++        //给我一个接口，还你一个实现类
++        return (T) Proxy.newProxyInstance(type.getClassLoader(),new Class[]{type},new MapperProxy(this));
++    }
++}
+Index: spring/pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/pom.xml	(revision 5f001c82a9af720bf576485475181506033d35b3)
++++ spring/pom.xml	(date 1675920578798)
+@@ -13,6 +13,7 @@
+     <packaging>pom</packaging>
+     <modules>
+         <module>spring-annotation</module>
++        <module>mybaits-demo</module>
+     </modules>
+ 
+     <properties>
+Index: spring/mybaits-demo/src/main/java/com/sun/session/SqlSession.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/session/SqlSession.java	(date 1675583412378)
++++ spring/mybaits-demo/src/main/java/com/sun/session/SqlSession.java	(date 1675583412378)
+@@ -0,0 +1,17 @@
++package com.sun.session;
++
++import java.util.List;
++
++public interface SqlSession {
++    /**
++     * 根据传入的条件查询单一结果
++     * @param statement  namespace+id，可以用做 key，去 configuration 里面获取 sql 语句，resultType
++     * @param parameter  要传入 sql 语句中的查询参数
++     * @param <T> 返回指定的结果对象
++     * @return
++     */
++    <T> T selectOne(String statement, Object parameter);
++    <T> List<T> selectList(String statement, Object parameter);
++    <T> int insert(String statement, Object parameter);
++    <T> T getMapper(Class<T> type);
++}
+Index: springboot/springboot-rabbitmq/src/main/java/com/sun/confirm/confirmConfig.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- springboot/springboot-rabbitmq/src/main/java/com/sun/confirm/confirmConfig.java	(date 1674029454488)
++++ springboot/springboot-rabbitmq/src/main/java/com/sun/confirm/confirmConfig.java	(date 1674029454488)
+@@ -0,0 +1,8 @@
++package com.sun.confirm;
++
++/**
++ * 发布确认高级
++ *
++ */
++public class confirmConfig {
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/pojo/User.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/pojo/User.java	(date 1675583412377)
++++ spring/mybaits-demo/src/main/java/com/sun/pojo/User.java	(date 1675583412377)
+@@ -0,0 +1,53 @@
++package com.sun.pojo;
++
++import java.io.Serializable;
++
++public class User implements Serializable {
++    private long userId;
++    private String userName;
++    private int sex;
++    private String role;
++
++
++    public long getUserId() {
++        return userId;
++    }
++
++    public void setUserId(long userId) {
++        this.userId = userId;
++    }
++
++    public String getUserName() {
++        return userName;
++    }
++
++    public void setUserName(String userName) {
++        this.userName = userName;
++    }
++
++    public int getSex() {
++        return sex;
++    }
++
++    public void setSex(int sex) {
++        this.sex = sex;
++    }
++
++    public String getRole() {
++        return role;
++    }
++
++    public void setRole(String role) {
++        this.role = role;
++    }
++
++    @Override
++    public String toString() {
++        return "User{" +
++                "userId=" + userId +
++                ", userName='" + userName + '\'' +
++                ", sex=" + sex +
++                ", role='" + role + '\'' +
++                '}';
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/util/JdbcInsert.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/util/JdbcInsert.java	(date 1675583412378)
++++ spring/mybaits-demo/src/main/java/com/sun/util/JdbcInsert.java	(date 1675583412378)
+@@ -0,0 +1,48 @@
++package com.sun.util;
++
++
++import java.sql.*;
++
++public class JdbcInsert {
++    public static void main(String[] args) throws SQLException {
++        //声明Connection对象
++        Connection con = null;
++        ResultSet rs = null;
++        try {
++            //加载驱动程序
++            Class.forName("com.mysql.jdbc.Driver");
++            //创建 connection 对象
++            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/test","root","sungw");
++
++            //使用 connection 对象创建statement 或者 PreparedStatement 类对象，用来执行SQL语句
++            String sql = "insert into t_user (userId,sex,usrName,role) VALUES(?,?,?,?);";
++            PreparedStatement statement = con.prepareStatement(sql);
++            //要执行的SQL语句
++            for(int i=0;i<100000000;i++){
++                /**
++                 * 调用实体StuInfo类,获取需要插入的各个字段的值
++                 * 注意参数占位的位置
++                 * 通过set方法设置参数的位置
++                 * 通过get方法取参数的值
++                 */
++                statement.setInt(1, i);
++                statement.setInt(2, 1);
++                statement.setString(3,"张三"+i);
++                statement.setString(4,"会员");
++                statement.executeUpdate(sql);
++                System.out.println("插入成功(*￣︶￣)");
++            }
++
++        } catch(ClassNotFoundException e) {
++            e.printStackTrace();
++        } catch(SQLException e) {
++            //数据库连接失败异常处理
++            e.printStackTrace();
++        }catch (Exception e) {
++            e.printStackTrace();
++        }finally{
++            rs.close();
++            con.close();
++        }
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/util/JdbcDemo.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/util/JdbcDemo.java	(date 1675583412378)
++++ spring/mybaits-demo/src/main/java/com/sun/util/JdbcDemo.java	(date 1675583412378)
+@@ -0,0 +1,50 @@
++package com.sun.util;
++
++import java.sql.*;
++
++public class JdbcDemo {
++    public static void main(String[] args) throws SQLException {
++        //声明Connection对象
++        Connection con = null;
++        ResultSet rs = null;
++        try {
++            //加载驱动程序
++            Class.forName("com.mysql.jdbc.Driver");
++            //创建 connection 对象
++             con = DriverManager.getConnection("jdbc:mysql://localhost:3306/test","root","sungw");
++
++            //使用 connection 对象创建statement 或者 PreparedStatement 类对象，用来执行SQL语句
++            Statement statement = con.createStatement();
++            //要执行的SQL语句
++            for(int i=0;i<10;i++){
++                String sql = "insert into t_user (userId,userName,sex,role) values("+i+","+"张三"+",0“,会员”)";
++                int j= statement.executeUpdate(sql);
++            }
++
++            //3.ResultSet类，用来存放获取的结果集！！
++
++
++            String userName = "";
++            String id = "";
++            while(rs.next()){
++                //获取job这列数据
++                userName = rs.getString("userName");
++                //获取userId这列数据
++                id = rs.getString("userId");
++
++                //输出结果
++                System.out.println(id + "\t" + userName);
++            }
++        } catch(ClassNotFoundException e) {
++            e.printStackTrace();
++        } catch(SQLException e) {
++            //数据库连接失败异常处理
++            e.printStackTrace();
++        }catch (Exception e) {
++            e.printStackTrace();
++        }finally{
++            rs.close();
++            con.close();
++        }
++    }
++}
+Index: spring/mybaits-demo/src/main/java/com/sun/session/SqlSessionFactory.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/session/SqlSessionFactory.java	(date 1675583412378)
++++ spring/mybaits-demo/src/main/java/com/sun/session/SqlSessionFactory.java	(date 1675583412378)
+@@ -0,0 +1,107 @@
++package com.sun.session;
++
++import com.sun.config.Configuration;
++import com.sun.config.MappedStatement;
++import org.dom4j.Document;
++import org.dom4j.DocumentException;
++import org.dom4j.Element;
++import org.dom4j.io.SAXReader;
++
++import java.io.File;
++import java.io.IOException;
++import java.io.InputStream;
++import java.net.URL;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Properties;
++
++public class SqlSessionFactory {
++
++    private final Configuration configuration = new Configuration();
++    public SqlSession openSession() {
++        // openSession 方法创建一个 DefaultSqlSession，configuration 配置类作为 构造函数参数传入
++        return new DefaultSqlSession(configuration);
++    }
++    // xml 文件存放的位置
++    private static final String MAPPER_CONFIG_LOCATION = "mappers";
++
++    // 数据库信息存放的位置
++    private static final String DB_CONFIG_FILE = "db.properties";
++    public SqlSessionFactory()  {
++        loadDBInfo();
++        loadMapperInfo();
++    }
++    private void loadDBInfo()  {
++        InputStream db = this.getClass().getClassLoader().getResourceAsStream(DB_CONFIG_FILE);
++        Properties p = new Properties();
++
++        try {
++            p.load(db);
++        } catch (IOException e) {
++            e.printStackTrace();
++        }
++        //将配置信息写入Configuration 对象
++        configuration.setJdbcDriver(p.get("jdbc.Driver").toString());
++        configuration.setJdbcUrl(p.get("jdbc.url").toString());
++        configuration.setJdbcUserName(p.get("jdbc.username").toString());
++        configuration.setJdbcPassword(p.get("jdbc.password").toString());
++
++    }
++
++    //解析并加载xml文件
++    private void loadMapperInfo(){
++        URL resources = null;
++        resources = this.getClass().getClassLoader().getResource(MAPPER_CONFIG_LOCATION);
++        File mappers = new File(resources.getFile());
++        //读取文件夹下面的文件信息
++        if(mappers.isDirectory()){
++            File[] files = mappers.listFiles();
++            for(File file:files){
++                loadMapperInfo(file);
++            }
++        }
++
++    }
++    private void loadMapperInfo(File file){
++        SAXReader reader = new SAXReader();
++        //通过read方法读取一个文件转换成Document 对象
++        Document document = null;
++        try {
++             document = reader.read(file);
++        } catch (DocumentException e) {
++            e.printStackTrace();
++        }
++        //获取根结点元素对象<mapper>
++        Element e = document.getRootElement();
++        //获取命名空间namespace
++        String namespace = e.attribute("namespace").getData().toString();
++        //获取select,insert,update,delete子节点列表
++        List<Element> selects = e.elements("select");
++        List<Element> inserts = e.elements("insert");
++        List<Element> updates = e.elements("update");
++        List<Element> deletes = e.elements("delete");
++
++        List<Element> all = new ArrayList<>();
++        all.addAll(selects);
++        all.addAll(inserts);
++        all.addAll(updates);
++        all.addAll(deletes);
++
++        //遍历节点，组装成 MappedStatement 然后放入到configuration 对象中
++        for(Element ele:all){
++            MappedStatement mappedStatement = new MappedStatement();
++            String id = ele.attribute("id").getData().toString();
++            String resultMap = ele.attribute("resultType") == null
++                    ? "":ele.attribute("resultType").getData().toString();
++            String sql = ele.getData().toString();
++
++            mappedStatement.setSourceId(namespace+"."+id);
++            mappedStatement.setResultType(resultMap);
++            mappedStatement.setNameSpace(namespace);
++            mappedStatement.setSql(sql);
++            // xml 文件中的每个 sql 方法都组装成 mappedStatement 对象，以 namespace+"."+id 为 key， 放入
++            // configuration 配置类中。
++            configuration.getMappedStatement().put(namespace+"."+id,mappedStatement);
++        }
++    }
++}
+Index: spring/mybaits-demo/src/main/resources/db.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>GBK
+===================================================================
+--- spring/mybaits-demo/src/main/resources/db.properties	(date 1675583412378)
++++ spring/mybaits-demo/src/main/resources/db.properties	(date 1675583412378)
+@@ -0,0 +1,4 @@
++jdbc.Driver = com.mysql.jdbc.Driver
++jdbc.url=jdbc:mysql://127.0.0.1:3306/test?characterEncoding=UTF-8&useUnicode=true&useSSL=false
++jdbc.username=root
++jdbc.password =sungw
+\ No newline at end of file
+Index: spring/mybaits-demo/src/main/resources/mappers/UserSqlMapper.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/resources/mappers/UserSqlMapper.xml	(date 1675583412378)
++++ spring/mybaits-demo/src/main/resources/mappers/UserSqlMapper.xml	(date 1675583412378)
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
++<mapper namespace="com.sun.mapper.UserMapper">
++  <!-- 通用查询映射结果 -->
++    
++		<select id="findUserList"  resultType="com.sun.pojo.User" >
++		    select * from t_user 
++		</select>
++
++		<select id="findUserById" resultType="com.sun.pojo.User">
++		  select * from t_user where userId=#{userId};
++		</select>
++	<insert id="insertUser"  >
++		insert into t_user (userId,userName,sex,role) values (#{userId},#{userName},#{sex},#{role});
++	</insert>
++
++</mapper>
+Index: spring/mybaits-demo/src/main/java/com/sun/util/ReflectionUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- spring/mybaits-demo/src/main/java/com/sun/util/ReflectionUtil.java	(date 1675583412378)
++++ spring/mybaits-demo/src/main/java/com/sun/util/ReflectionUtil.java	(date 1675583412378)
+@@ -0,0 +1,74 @@
++package com.sun.util;
++
++import java.lang.reflect.Field;
++import java.sql.ResultSet;
++import java.sql.SQLException;
++
++public class ReflectionUtil{
++
++    /**
++     *
++     * 为指定的 bean 的 propName 属性的设为 value
++     * @param bean 目标对象
++     * @param propName 属性
++     * @param value 值
++     */
++    public static  void  setPropToBean(Object bean,String propName,Object value){
++        Field f;
++
++        try {
++            f = bean.getClass().getDeclaredField(propName);
++            f.setAccessible(true);
++            f.set(bean,value);
++        } catch (NoSuchFieldException e) {
++            e.printStackTrace();
++        } catch (IllegalAccessException e) {
++            e.printStackTrace();
++        }
++
++    }
++
++
++    public static void setPropToBeanFromResultSet(Object entity, ResultSet resultSet) throws SQLException{
++        //通过反射方法获取对象的所有字段
++        Field[] declaredFields = entity.getClass().getDeclaredFields();
++
++        for(int i = 0;i<declaredFields.length;i++){
++            if(declaredFields[i].getType().getSimpleName().equals("String")){
++                setPropToBean(entity,declaredFields[i].getName(),resultSet.getString(declaredFields[i].getName()));
++            }else if(declaredFields[i].getType().getSimpleName().equals("Integer")){
++                setPropToBean(entity,declaredFields[i].getName(),resultSet.getInt(declaredFields[i].getName()));
++            }else if(declaredFields[i].getType().getSimpleName().equals("Long")){
++                setPropToBean(entity,declaredFields[i].getName(),resultSet.getLong(declaredFields[i].getName()));
++            }
++        }
++
++    }
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++}
+\ No newline at end of file
