@@ -73,11 +73,11 @@ public class TaxAction {
 
     public static void main(String[] args) {
         //税前月薪
-        BigDecimal salary = new BigDecimal(20000);
+        BigDecimal salary = new BigDecimal(183283);
         //五险一金个人 缴纳部分
-        BigDecimal socialSecurity = new BigDecimal(2000);
+        BigDecimal socialSecurity = new BigDecimal(23872);
         // 个税6项扣减 月累计免征额度
-        BigDecimal num = new BigDecimal(2500);
+        BigDecimal num = new BigDecimal(36000);
         getPayload(salary, socialSecurity, num);
     }
 }
